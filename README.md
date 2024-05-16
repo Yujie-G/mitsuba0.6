@@ -60,6 +60,9 @@ When using SCons compilation, you need to specify which library to link in `conf
 
 ## Dependencies list
 
+
+[Download.zip](https://nankai.feishu.cn/file/IkEGbl9twopMk0x44lvcQLprnJf?from=from_copylink)
+
  - If you can't download dependencies in cmake, you can download them manually to `dependencies/Downloads`. After downloading, you can start from Step 1 in "Compilation" section.
  - **All downloaded content are stored in `dependencies/Downloads`**
  - In this table, if "Filename" ends with '/', means this is a folder; otherwise this is a file.
