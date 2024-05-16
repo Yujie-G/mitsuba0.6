@@ -1,0 +1,25 @@
+Import('env', 'plugins')
+
+plugins += env.SharedLibrary('addimages', ['addimages.cpp'])
+plugins += env.SharedLibrary('joinrgb', ['joinrgb.cpp'])
+plugins += env.SharedLibrary('cylclip', ['cylclip.cpp'])
+plugins += env.SharedLibrary('kdbench', ['kdbench.cpp'])
+plugins += env.SharedLibrary('ndfVis', ['ndfVis.cpp'])
+plugins += env.SharedLibrary('tonemap', ['tonemap.cpp'])
+#plugins += env.SharedLibrary('rdielprec', ['rdielprec.cpp'])
+
+## [fjh] path tracing
+plugins += env.SharedLibrary('pt', ['pathtracing.cpp'])
+plugins += env.SharedLibrary('pt_datagen', ['pathtracing_datagen.cpp'])
+plugins += env.SharedLibrary('pt_datagen_macro_frame', ['pathtracing_datagen_macro_frame.cpp'])
+plugins += env.SharedLibrary('pt_datagen_macro_frame_ours', ['pathtracing_datagen_macro_frame_ours.cpp'])
+
+avxEnv = env.Clone()
+avxEnv.Append( CCFLAGS=['-mavx', '-mavx2', '-mf16c'] )
+# avxEnv['CXXFLAGS'].append('-g')
+# avxEnv['CXXFLAGS'].remove('-O3')
+plugins += avxEnv.SharedLibrary('pt_datagen_macro_frame_rainer20', ['pathtracing_datagen_macro_frame_rainer20.cpp'])
+plugins += avxEnv.SharedLibrary('pt_datagen_macro_frame_rainer20_random_queries', ['pathtracing_datagen_macro_frame_rainer20_random_queries.cpp'])
+
+
+Export('plugins')

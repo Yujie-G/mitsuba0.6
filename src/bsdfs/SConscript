@@ -1,0 +1,86 @@
+Import('env', 'plugins')
+
+# Basic library of smooth and rough materials
+plugins += env.SharedLibrary('diffuse', ['diffuse.cpp'])
+plugins += env.SharedLibrary('dielectric', ['dielectric.cpp'])
+plugins += env.SharedLibrary('conductor', ['conductor.cpp'])
+plugins += env.SharedLibrary('plastic', ['plastic.cpp'])
+plugins += env.SharedLibrary('roughdiffuse', ['roughdiffuse.cpp'])
+plugins += env.SharedLibrary('roughdielectric', ['roughdielectric.cpp'])
+plugins += env.SharedLibrary('roughconductor', ['roughconductor.cpp'])
+plugins += env.SharedLibrary('roughplastic', ['roughplastic.cpp'])
+
+# Materials that act as modifiers
+plugins += env.SharedLibrary('twosided', ['twosided.cpp'])
+plugins += env.SharedLibrary('mask', ['mask.cpp'])
+plugins += env.SharedLibrary('mixturebsdf', ['mixturebsdf.cpp'])
+plugins += env.SharedLibrary('blendbsdf', ['blendbsdf.cpp'])
+plugins += env.SharedLibrary('coating', ['coating.cpp'])
+plugins += env.SharedLibrary('roughcoating', ['roughcoating.cpp'])
+plugins += env.SharedLibrary('bumpmap', ['bumpmap.cpp'])
+plugins += env.SharedLibrary('normalmap', ['normalmap.cpp'])
+
+# Other materials
+plugins += env.SharedLibrary('ward', ['ward.cpp'])
+plugins += env.SharedLibrary('phong', ['phong.cpp'])
+plugins += env.SharedLibrary('difftrans', ['difftrans.cpp'])
+plugins += env.SharedLibrary('hk', ['hk.cpp'])
+plugins += env.SharedLibrary('null', ['null.cpp'])
+plugins += env.SharedLibrary('thindielectric', ['thindielectric.cpp'])
+
+# [fjh] bsdfList
+plugins += env.SharedLibrary('roughconductorApprox', ['roughconductorApprox.cpp'])
+plugins += env.SharedLibrary('roughconductorApprox_exo', ['roughconductorApprox_exo.cpp'])
+plugins += env.SharedLibrary('diffuse_exo', ['diffuse_exo.cpp'])
+plugins += env.SharedLibrary('multilayered', ['multilayered.cpp'])
+plugins += env.SharedLibrary('multilayered_bsdfList_allrandom', ['multilayered_bsdfList_allrandom.cpp'])
+plugins += env.SharedLibrary('multilayered_bsdfList_debug', ['multilayered_bsdfList_debug.cpp'])
+plugins += env.SharedLibrary('roughdiffuse_bsdfList_fan_grid', ['roughdiffuse_bsdfList_fan_grid.cpp'])
+plugins += env.SharedLibrary('roughconductor_bsdfList_fan_grid', ['roughconductor_bsdfList_fan_grid.cpp'])
+plugins += env.SharedLibrary('roughconductorApprox_bsdfList_fan_grid', ['roughconductorApprox_bsdfList_fan_grid.cpp'])
+plugins += env.SharedLibrary('roughplastic_bsdfList_fan_grid', ['roughplastic_bsdfList_fan_grid.cpp'])
+
+# [fjh] UBO 2014
+avxEnv = env.Clone()
+avxEnv.Append( CCFLAGS=['-mavx', '-mavx2', '-mf16c'] )
+# avxEnv['CXXFLAGS'].remove('-O3')
+# avxEnv['CXXFLAGS'].append('-g')
+plugins += avxEnv.SharedLibrary('ubo2014_bsdfList_randomdirection', [
+    'ubo2014_bsdfList_randomdirection.cpp', 
+    'DelaunayTriangulation/DelaunayTriangulation.cpp', 'DelaunayTriangulation/Triangle.cpp', 'DelaunayTriangulation/Vector3D.cpp'
+    ])
+plugins += avxEnv.SharedLibrary('ubo2014_bsdfList_allrandom', [
+    'ubo2014_bsdfList_allrandom.cpp', 
+    'DelaunayTriangulation/DelaunayTriangulation.cpp', 'DelaunayTriangulation/Triangle.cpp', 'DelaunayTriangulation/Vector3D.cpp'
+    ])
+plugins += avxEnv.SharedLibrary('ubo2014_bsdfList_rainer20_randomdirection_uvloop', [
+    'ubo2014_bsdfList_rainer20_randomdirection_uvloop.cpp', 
+    'DelaunayTriangulation/DelaunayTriangulation.cpp', 'DelaunayTriangulation/Triangle.cpp', 'DelaunayTriangulation/Vector3D.cpp'
+    ])
+plugins += avxEnv.SharedLibrary('ubo2014_bsdfList_rainer20_full_queries', ['ubo2014_bsdfList_rainer20_full_queries.cpp'])
+plugins += avxEnv.SharedLibrary('ubo2014_bsdfList_full_queries', ['ubo2014_bsdfList_full_queries.cpp'])
+plugins += avxEnv.SharedLibrary('ubo2014_bsdfList_fan_grid', [
+    'ubo2014_bsdfList_fan_grid.cpp',
+    'DelaunayTriangulation/DelaunayTriangulation.cpp', 'DelaunayTriangulation/Triangle.cpp', 'DelaunayTriangulation/Vector3D.cpp',
+    ])
+
+# [fjh] ubo2003
+plugins += avxEnv.SharedLibrary('ubo2003', [
+    'ubo2003.cpp', 
+    'DelaunayTriangulation/DelaunayTriangulation.cpp', 'DelaunayTriangulation/Triangle.cpp', 'DelaunayTriangulation/Vector3D.cpp'
+    ])
+    
+# [fjh] MERL
+plugins += env.SharedLibrary('merl', ['merl.cpp'])
+
+# [fjh] decoder
+plugins += env.SharedLibrary('decoder_gaussian', ['decoder_gaussian.cpp'])
+plugins += env.SharedLibrary('decoder_lambertian', ['decoder_lambertian.cpp'])
+
+# The Irawan-Marschner plugin uses a Boost::Spirit parser, which makes it
+# pretty heavy stuff to compile. Go easy on the compiler flags:
+irawanEnv = env.Clone()
+irawanEnv.RelaxCompilerSettings()
+plugins += irawanEnv.SharedLibrary('irawan', ['irawan.cpp'])
+
+Export('plugins')
