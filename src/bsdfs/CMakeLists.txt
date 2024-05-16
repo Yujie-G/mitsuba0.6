@@ -20,6 +20,8 @@ add_library(difftrans SHARED difftrans.cpp)
 add_library(hk SHARED hk.cpp)
 add_library(null SHARED null.cpp)
 add_library(thindielectric SHARED ior.h thindielectric.cpp)
+
+
 target_link_libraries(diffuse mitsuba-python)
 target_link_libraries(dielectric mitsuba-python)
 target_link_libraries(conductor mitsuba-python)
@@ -69,3 +71,30 @@ set_target_properties(thindielectric PROPERTIES FOLDER "plugins")
 add_library(irawan irawan.cpp)
 target_link_libraries(irawan mitsuba-python)
 set_target_properties(irawan PROPERTIES FOLDER "plugins")
+
+add_library(dj_brdf SHARED dj_brdf.cpp)
+target_link_libraries(dj_brdf mitsuba-python)
+set_target_properties(dj_brdf PROPERTIES FOLDER "plugins")
+
+add_library(dj_merl SHARED dj_merl.cpp)
+target_link_libraries(dj_merl mitsuba-python)
+set_target_properties(dj_merl PROPERTIES FOLDER "plugins")
+
+add_library(dj_utia SHARED dj_utia.cpp)
+target_link_libraries(dj_utia mitsuba-python)
+set_target_properties(dj_utia PROPERTIES FOLDER "plugins")
+
+add_library(dj_abc SHARED dj_abc.cpp)
+target_link_libraries(dj_abc mitsuba-python)
+set_target_properties(dj_abc PROPERTIES FOLDER "plugins")
+
+add_library(dj_sgd SHARED dj_sgd.cpp)
+target_link_libraries(dj_sgd mitsuba-python)
+set_target_properties(dj_sgd PROPERTIES FOLDER "plugins")
+
+
+add_library(dj_beckmannconductor SHARED dj_beckmannconductor.cpp)
+target_link_libraries(dj_beckmannconductor mitsuba-python)
+set_target_properties(dj_beckmannconductor PROPERTIES FOLDER "plugins")
+
+
