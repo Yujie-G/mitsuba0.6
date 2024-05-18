@@ -216,39 +216,19 @@ public:
 			x.size() * sizeof(double));
 	}
 
-	int run(int argc, char** argv) {
-
-		std::map<std::string, std::string> parameters;
-		std::string destFile;
-		ELogLevel logLevel = EInfo;
-		int nprocs = 1;
-		bool quietMode = false;
-		bool useSppIndex = false;
-
-		parseCommandLine(argc, argv, parameters, destFile, logLevel, nprocs, quietMode, useSppIndex);
-
-		/* Initialize OpenMP */
-		Thread::initializeOpenMP(nprocs);
-		
-		Properties props("roughdielectric");
-		//float roughness = std::stof(parameters["r"]);
-		//std::string material = parameters["mat"];
-		//props.setPluginName("bsdf")
-		//float ior = std::stof(parameters["ior"]);
-		float roughness = 0.03, ior = 1.34;
-		props.setFloat("alpha", roughness); // roughness
-		//props.setString("material", material);
-		props.setFloat("intIOR", ior);
-		ref<BSDF> bsdf = static_cast<BSDF*>(PluginManager::getInstance()->createObject(MTS_CLASS(BSDF), props));
-
-		std::vector<float> m_image;
-		std::vector<double> merl(3 * 90 * 90 * 180);
+	void mat_gen(Scene *scene, std::string destFile){
+        ref<BSDF> bsdf = scene->getShapes()[0]->getBSDF();
+        std::vector<float> m_image;
 
 		Intersection its;
 		its.p = Point3(0.0, 0.0, 0.0);
 		its.shFrame.n = Normal(0.0, 0.0, 1.0); 
 		its.geoFrame.n = its.shFrame.n; 
 		its.uv = Point2(0.5, 0.5); 
+        Properties props("independent");
+        props.setInteger("sampleCount", 16);
+        // Instantiate the sampler
+        ref<Sampler> sampler = static_cast<Sampler *>(PluginManager::getInstance()->createObject(MTS_CLASS(Sampler), props));
 
 		int cnt = 0;
 		for (Float theta_i = 0; theta_i <= 90.0; theta_i += 90.0 / 25.0) {
@@ -257,7 +237,10 @@ public:
 					for (Float phi_o = 0; phi_o < 360.0; phi_o += 360.0 / 25.0) {
 						Vector wi = sphericalDirection(theta_i, phi_i);
 						Vector wo = sphericalDirection(theta_o, phi_o);
-						Spectrum rgb = bsdf->eval(BSDFSamplingRecord(its, wi, wo));
+                        BSDFSamplingRecord bRec(its, wi, wo);
+                        bRec.sampler = sampler;
+						Spectrum rgb = bsdf->eval(bRec);
+
 						m_image.push_back(wi[0]);    // view_x
 						m_image.push_back(wi[1]);     // view_y
 						m_image.push_back(wo[0]);   // light_x
@@ -271,32 +254,7 @@ public:
 			}
 		}
 
-		
-		/*for (size_t th = 0; th < 90; ++th) {
-			double theta_h = static_cast<double>(th) / 90.0;
-			theta_h = theta_h * theta_h * M_PI_2;
-			for (size_t td = 0; td < 90; ++td) {
-				double theta_d = static_cast<double>(td) / 90.0 * M_PI_2;
-				for (size_t pd = 0; pd < 180; ++pd) {
-					double phi_d = static_cast<double>(pd) / 180.0 * M_PI;
-
-					Vector3f wi, wo;
-					half_angle_to_std(theta_h, theta_d, phi_d, wi, wo);
-
-					Spectrum rgb = bsdf->eval(BSDFSamplingRecord(its, wi, wo));
-
-					constexpr size_t k_stride = 90 * 90 * 180;
-					const size_t idx = th * 90 * 180 + td * 180 + pd;
-
-					merl[idx] = rgb[0] / wi[2] * 1500.0;
-					merl[idx + k_stride] = rgb[1] / wi[2] * 1500.0 / 1.15;
-					merl[idx + k_stride + k_stride] = rgb[2] / wi[2] * 1500.00 / 1.66;
-				}
-			}
-		}*/
-
-
-
+		std::vector<double> merl(3 * 90 * 90 * 180);
 		for (size_t th = 0; th < 90; ++th) {
 			double theta_h = static_cast<double>(th) / 90.0;
 			theta_h = theta_h * theta_h * M_PI_2;
@@ -308,7 +266,9 @@ public:
 					Vector3f wi, wo;
 					half_angle_to_std(theta_h, theta_d, phi_d, wi, wo);
 
-					Spectrum rgb = bsdf->eval(BSDFSamplingRecord(its, wi, wo));
+					BSDFSamplingRecord bRec(its, wi, wo);
+                    bRec.sampler = sampler;  
+					Spectrum rgb = bsdf->eval(bRec);
 
 					constexpr size_t k_stride = 90 * 90 * 180;
 					const size_t idx = th * 90 * 180 + td * 180 + pd;
@@ -316,7 +276,6 @@ public:
 					merl[idx] = rgb[0] / wi[2] * 1500.0;
 					merl[idx + k_stride] = rgb[1] / wi[2] * 1500.0 / 1.15;
 					merl[idx + k_stride + k_stride] = rgb[2] / wi[2] * 1500.00 / 1.66;
-
 				}
 			}
 		}
@@ -325,13 +284,138 @@ public:
 
 		/* deal with output path */
 		std::string path = fs::path(destFile).string();
-		std::string outPath(path);
-		std::string ext = ".exr";
-		size_t found = path.find(ext);
-		save_merl(merl, outPath+".merl");
+		std::string merl_outPath(path);
+		merl_outPath = merl_outPath.append(".merl");
+        std::cout<<"save file to "<< merl_outPath<<std::endl;
+		save_merl(merl, merl_outPath);
 
-		Vector2i resolution(25*25, 25*25);
-		writeOutput(m_image, outPath + ".exr", resolution);
+        Vector2i resolution(25*25, 25*25);
+		writeOutput(m_image, path.append(".exr"), resolution);
+    }
+	
+	int run(int argc, char** argv) {
+
+		int optchar;
+		char *end_ptr = NULL;
+
+		/* Default settings */
+		int nprocs_avail = getCoreCount(), nprocs = nprocs_avail;
+		std::string destFile="";
+		bool quietMode = false, useSppIndex = false;
+		ELogLevel logLevel = EInfo;
+		ref<FileResolver> fileResolver = Thread::getThread()->getFileResolver();
+		std::map<std::string, std::string, SimpleStringOrdering> parameters;
+
+		if (argc < 2) {
+			help();
+			return 0;
+		}
+
+		optind = 1;
+		/* Parse command-line arguments */
+		while ((optchar = getopt(argc, argv, "D:o:L:p:vqih")) != -1)
+		{
+            std::cout << "DEBUG" <<std::endl;
+			switch (optchar) {
+				case 'D': {
+						std::vector<std::string> param = tokenize(optarg, "=");
+						if (param.size() != 2)
+							SLog(EError, "Invalid parameter specification \"%s\"", optarg);
+						parameters[param[0]] = param[1];
+					}
+					break;
+				case 'o':
+                    std::cout << "Option -o with argument: " << optarg << std::endl;
+					destFile = optarg;
+					break;
+                case 'v':
+                    if (logLevel != EDebug)
+                        logLevel = EDebug;
+                    else
+                        logLevel = ETrace;
+                    break;
+                case 'L': {
+                        std::string arg = boost::to_lower_copy(std::string(optarg));
+                        if (arg == "trace")
+                            logLevel = ETrace;
+                        else if (arg == "debug")
+                            logLevel = EDebug;
+                        else if (arg == "info")
+                            logLevel = EInfo;
+                        else if (arg == "warn")
+                            logLevel = EWarn;
+                        else if (arg == "error")
+                            logLevel = EError;
+                        else
+                            SLog(EError, "Invalid log level!");
+                    }
+                    break;
+				case 'p':
+					nprocs = strtol(optarg, &end_ptr, 10);
+					if (*end_ptr != '\0')
+						SLog(EError, "Could not parse the processor count!");
+					break;
+                case 'q':
+                    quietMode = true;
+                    break;
+				case 'i':
+					useSppIndex = true;
+					break;
+				case 'h':
+				default:
+					help();
+					return 0;
+			}
+		}
+
+        /* Initialize OpenMP */
+        Thread::initializeOpenMP(nprocs);
+		
+        /* Prepare for parsing scene descriptions */
+        SAXParser* parser = new SAXParser();
+        fs::path schemaPath = fileResolver->resolveAbsolute("data/schema/scene.xsd");
+
+        /* Check against the 'scene.xsd' XML Schema */
+        parser->setDoSchema(true);
+        parser->setValidationSchemaFullChecking(true);
+        parser->setValidationScheme(SAXParser::Val_Always);
+        parser->setExternalNoNamespaceSchemaLocation(schemaPath.c_str());
+
+        /* Set the handler */
+        SceneHandler *handler = new SceneHandler(parameters);
+        parser->setDoNamespaces(true);
+        parser->setDocumentHandler(handler);
+        parser->setErrorHandler(handler);
+
+		std::string lowercase = boost::to_lower_copy(std::string(argv[optind]));
+		fs::path
+			filename = fileResolver->resolve(argv[optind]),
+			filePath = fs::absolute(filename).parent_path(),
+			baseName = filename.stem();
+		ref<FileResolver> frClone = fileResolver->clone();
+		frClone->prependPath(filePath);
+		Thread::getThread()->setFileResolver(frClone);
+
+		SLog(EInfo, "Parsing scene description from \"%s\" ..", argv[optind]);
+
+		parser->parse(filename.c_str());
+		ref<Scene> scene = handler->getScene();
+
+        /* Configure the logging subsystem */
+		Logger *logger = Thread::getThread()->getLogger();
+		logger->setLogLevel(logLevel);
+        /* Disable the default appenders */
+        for (size_t i=0; i<logger->getAppenderCount(); ++i) {
+            Appender *appender = logger->getAppender(i);
+            if (appender->getClass()->derivesFrom(MTS_CLASS(StreamAppender)))
+                logger->removeAppender(appender);
+        }
+        if (!quietMode)
+            logger->addAppender(new StreamAppender(&std::cout));
+			
+		scene->initialize();		
+
+		mat_gen(scene, (destFile.length() > 0 ? fs::path(destFile) : (filePath / baseName)).string());
 		return 0;
 	}
 
@@ -343,5 +427,5 @@ private:
 
 };
 
-MTS_EXPORT_UTILITY(MatGen, "mat generation")
+MTS_EXPORT_UTILITY(MatGen, "generate merl sample result")
 MTS_NAMESPACE_END

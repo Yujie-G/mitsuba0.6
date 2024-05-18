@@ -60,3 +60,5 @@ data/windows/wmain_stub.obj
 
 CMakeFiles/
 CMakeCache.txt
+
+.vs
